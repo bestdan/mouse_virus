@@ -1,0 +1,127 @@
+---
+title: "Kevin_thing"
+author: "Daniel P. Egan"
+date: "4/27/2020"
+output: pdf_document
+params: 
+  kProjPath: ""
+---
+
+```{r setup, include=FALSE}
+if ( kProjPath == "") stop("No proj path")
+library(readxl)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(ggstance)
+library(readxl)
+library(scales)
+library(patchwork)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+kDataFilePath <- file.path(kProjPath, "data", "Data_sheet_for_DNA.xlsx")
+```
+
+
+## Processing
+In this section I import and clean the data. 
+
+```{r a_clean}
+raw_data_1a <- read_xlsx(kDataFilePath, sheet = "1A")
+
+data_a <- 
+  raw_data_1a %>% 
+  pivot_longer(cols = -Day, names_to = "category", values_to = "value") %>%
+  mutate(category = gsub("\r\n", "", category)) %>% 
+  group_by(category) 
+```
+
+
+```{r 1a_plot}
+# Define global graphing themes
+theme_update(plot.title = element_text(hjust = 0.5, size = 10),
+             axis.text=element_text(size = 5),
+             axis.title=element_text(size = 5,face = "bold"),
+             legend.text = element_text(size = 4), 
+             legend.key.size = unit(0.1, units = "cm"),
+             legend.title = element_text(size = 4, face = "bold")) 
+  
+# Create a plot object to be 'printed' later. 
+plot_a1 <- 
+  data_a %>% 
+  ggplot(data = ., 
+         aes(x = Day, y = value, group = category)) + 
+  geom_step(aes(col = category), position = position_dodgev(height = 0.1)) + 
+  labs(title = "Naive HS-1 Survival", 
+       x = "Days", 
+       y = "% Survival") + 
+  scale_y_continuous(limits = c(0,1), labels = percent) +
+  theme(legend.position = c(0,0), legend.justification = c(-0.2, -0.2))
+```
+
+```{r 1f_clean}
+raw_data_1f <- read_xlsx(kDataFilePath, sheet = "1F")
+data_1f <- 
+  raw_data_1f %>% 
+  select(c(1,3,5)) %>% 
+  rename("PolyC_RNA" = "PolyC RNA") %>% 
+  mutate(obs_id = seq_len(nrow(raw_data_1f))) %>% 
+  pivot_longer(cols = -obs_id, names_to = "category", values_to = "value") %>% 
+  mutate(category_cat = factor(category, 
+                               levels = c( "Protein", "PolyC_RNA", "mRNA"), 
+                               labels = c("Protein", "PolyC RNA", "mRNA")))
+```
+
+```{r 1f_plot}
+# Create a plot object to be 'printed' later. 
+plot_f <- 
+  data_1f %>% 
+  ggplot(data = ., 
+         aes(x = category_cat, y = value)) + 
+  geom_point(aes(col = category_cat,
+                 shape = category_cat,
+                 alpha = 0.5),
+             position = position_jitter(height = 0, width = 0.1)) + 
+  labs(x = "Vaccination Group", y = "Ipsom lorem etc") + 
+  scale_y_continuous(limits = c(0, 5))  + 
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5))
+
+```
+
+# Final Plots
+
+```{r final, fig.height= 6, fig.align="center" }
+# Arrange all the relevant plots in a grid
+grid.arrange(plot_a1, 
+             plot_f + labs(title = "Plot B"),
+             plot_f + labs(title = "Plot C"),
+             plot_f + labs(title = "Plot D1"),
+             plot_f + labs(title = "Plot D2"),
+             plot_f + labs(title = "Plot D3"),
+             plot_f + labs(title = "Plot E1"),
+             plot_f + labs(title = "Plot E2"),
+             plot_f + labs(title = "Plot F"),
+  nrow = 3
+)
+```
+
+\newpage
+
+```{r final_using_patchwork, fig.height= 6, fig.align="center" }
+# Arrange all the relevant plots in a grid
+final_plot_patchwork <-
+  plot_a1 +  
+  plot_f + labs(title = "Plot B") +
+  plot_f + labs(title = "Plot C") + 
+  plot_f + labs(title = "Plot D1") + 
+  plot_f + labs(title = "Plot D2") +
+  plot_f + labs(title = "Plot D3") +
+  plot_f + labs(title = "Plot E1") +
+  plot_f + labs(title = "Plot E2") +
+  plot_f + labs(title = "Plot F") +
+  plot_layout(ncol = 3)
+final_plot_patchwork
+```
+
+Done. 
